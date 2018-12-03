@@ -8,113 +8,136 @@ namespace ЭЦП_на_эллиптических_кривых
 {
     class Program
     {
+        //Эллиптическая кривая
         const int p = 41;
         const int a = 1, b = 3; //опорная точка
 
         static void Main(string[] args)
         {
-            List<KeyValuePair<int, int>> points = new List<KeyValuePair<int, int>>();//точки, принадлежащие прямой и удовлетворяющие условию
-            int[] sqrs = new int[p]; //sqrs[i] = i^2 mod p
-            int[] sqrts = new int[p]; //sqrts[i] = sqrt(i) mod p
-            List<int> order = new List<int>(); //порядок points[i] = order[i]
+            int a = 6;
+            int b = a.PowMod(53, 13);
+            Group group = new Group(p, a, b);
+            //здесь можно определить свой генератор группы
+            group.Generate(group.IndexOfMaxOrder());
 
+        }
+    }
+    public class Point
+    {
+        public int x;
+        public int y;
+        public int order;
+        public bool is_O;
+        public Point(int x, int y, int order)
+        {
+            this.x = x;
+            this.y = y;
+            this.order = order;
+            is_O = false;
+        }
+        public Point(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+            order = -1;
+            is_O = false;
+        }
+        public Point(bool is_O)
+        {
+            x = 0;
+            y = 0;
+            order = -1;
+            is_O = true;
+        }
+    }
+    public class Group
+    {
+        public int p, a, b;
+        public List<Point> all_points;
+        public List<Point> points;
+        public int[] sqrs; //sqrs[i] = i^2 mod p
+        public int[] sqrts; //sqrts[i] = sqrt(i) mod p
+        public Group(int new_p, int new_a, int new_b)
+        {
+            all_points = new List<Point>();
+            points = new List<Point>();
+            p = new_p;
+            a = new_a;
+            b = new_b;
+            sqrs = new int[p]; //sqrs[i] = i^2 mod p
+            sqrts = new int[p]; //sqrts[i] = sqrt(i) mod p
             for (int i = 1; i < p; i++)
             {
-                //if (i <= p / 2)
                 sqrs[i] = (i * i).Mod(p);
                 if (sqrts[(i * i).Mod(p)] == 0)
                     sqrts[(i * i).Mod(p)] = i;
             }
-            int x = 0;
-            for (; x < p; x++)
+            for (int x = 0; x < p; x++)
             {
                 int y = (x * x * x + x + 3).Mod(p);
                 if (sqrs.Contains(y))
                 {
-                    points.Add(new KeyValuePair<int, int>(x, sqrts[y]));
+                    all_points.Add(new Point(x, sqrts[y]));
                     if (sqrts[y] != 0)
-                        points.Add(new KeyValuePair<int, int>(x, -sqrts[y] + p));
+                        all_points.Add(new Point(x, -sqrts[y] + p));
                 }
             }
-            //foreach (var point in points)
-            //{
-            //    Console.WriteLine($"{point.Key} {point.Value}");
-            //}
-            //Console.WriteLine(points.Count);
-            for (int i = 0; i < points.Count; i++)
+            for (int i = 0; i < all_points.Count; i++)
             {
                 int por = 1;
-                try
+                Point init = all_points[i];
+                Point result = all_points[i];
+                while (!result.is_O)
                 {
-                    KeyValuePair<int, int> init = points[i];//new KeyValuePair<int, int>(27, 22);// points[0];
-                    KeyValuePair<int, int> result = points[i];//new KeyValuePair<int, int>(27, 22);// points[0];
-                    while (true)
-                    {
-                        por++;
-                        result = Sum(init, result);
-                        //Console.WriteLine(result);
-
-                    }
-                }
-                catch (DivideByZeroException ex)
-                {
-                    Console.WriteLine($"Порядок точки ({points[i].Key};{points[i].Value}) равен {por}");
-                    order.Add(por);
-                }
-            }
-            //здесь можно определить свой генератор группы
-            int index_gen = order.IndexOf(order.Max());
-            KeyValuePair<int, int> gen = points[index_gen];
-
-            List<KeyValuePair<int, int>> group = new List<KeyValuePair<int, int>>();
-            try
-            {
-                KeyValuePair<int, int> init = gen;//new KeyValuePair<int, int>(27, 22);// points[0];
-                group.Add(gen);
-                KeyValuePair<int, int> result = gen;//new KeyValuePair<int, int>(27, 22);// points[0];
-                while (true)
-                {
+                    por++;
                     result = Sum(init, result);
-                    group.Add(result);
                 }
+                all_points[i].order = por;
             }
-            catch (DivideByZeroException ex)
+        }
+        public void Generate(int index)
+        {
+            Point gen = all_points[index];
+            points.Add(new Point(true));
+            Point result = gen;
+            while (result.is_O != true)
             {
-                foreach (var value in group)
-                    Console.WriteLine($"({value.Key};{value.Value})");
+                points.Add(result);
+                Console.WriteLine($"({result.x};{result.y})");
+                result = Sum(gen, result);
             }
+
             bool result_is_O = false;
             do
             {
-                Console.WriteLine($"Всего точек в группе {group.Count() + 1} (в том числе О)");
+                Console.WriteLine($"Всего точек в группе {points.Count()} (в том числе О)");
                 int n;
                 Console.WriteLine($"Введите число n: ");
                 do
                 {
                     n = Convert.ToInt32(Console.ReadLine());
-                    if (n > group.Count || n <= 1)
+                    if (n >= points.Count || n <= 1)
                         Console.WriteLine($"Пожалуйста, введите другое число n: ");
                 }
-                while (n > group.Count || n <= 1);
+                while (n >= points.Count || n <= 1);
 
-                KeyValuePair<int, int> openKey = group[Mult(group, 0, n)];
-                KeyValuePair<int, int> otherOpenKey, closeKey;
-                Console.WriteLine($"Открытый ключ: ({openKey.Key};{openKey.Value})");
+                int index_openKey = Mult(1, n);
+                int index_otherOpenKey, index_closeKey;
+                Console.WriteLine($"Открытый ключ: ({points[index_openKey].x};{points[index_openKey].y})");
                 do
                 {
                     Console.WriteLine($"Введите второй открытый ключ: ");
                     int x1 = Convert.ToInt32(Console.ReadLine());
                     int y1 = Convert.ToInt32(Console.ReadLine());
-                    otherOpenKey = new KeyValuePair<int, int>(x1, y1);
-                    if (!group.Contains(otherOpenKey))
+                    index_otherOpenKey = IndexOf(x1, y1);
+                    if (index_otherOpenKey == -1)
                         Console.WriteLine($"Такого элемента в группе нет!");
                 }
-                while (!group.Contains(otherOpenKey));
-                int index = Mult(group, group.IndexOf(otherOpenKey), n);
-                if (index != group.Count)//если не О
+                while (index_otherOpenKey == -1);
+                index_closeKey = Mult(index_otherOpenKey, n);
+                if (index != 0)//если не О
                 {
-                    closeKey = group[index];
-                    Console.WriteLine($"Закрытый ключ: ({closeKey.Key};{closeKey.Value})");
+                    Console.WriteLine($"Закрытый ключ: ({points[index_closeKey].x};{points[index_closeKey].y})");
                     result_is_O = false;
                 }
                 else
@@ -125,40 +148,100 @@ namespace ЭЦП_на_эллиптических_кривых
             }
             while (result_is_O);
         }
-
-        public static KeyValuePair<int, int> Sum(KeyValuePair<int, int> p1, KeyValuePair<int, int> p2)
+        public int Count()
         {
-            //if ((p1.Value + p2.Value).Mod(p) == 0)
-            //{
-            //    throw new DivideByZeroException();
-            //}
-
-            int tg;
-            if (p1.Key == p2.Key && p1.Value == p2.Value)
+            return points.Count;
+        }
+        public Point At(int index)
+        {
+            if (index >= points.Count)
             {
-                int value = (2 * p1.Value).Mod(p);
+                throw new IndexOutOfRangeException();
+            }
+            return points[index];
+        }
+        public void Add(Point point)
+        {
+            points.Add(point);
+        }
+        public int IndexOfMaxOrder()
+        {
+            int res = 0;
+            for (int i = 0; i < all_points.Count; i++)
+            {
+                if (all_points[i].order > all_points[res].order)
+                    res = i;
+            }
+            return res;
+        }
+        public int IndexOfRandonMaxOrder()
+        {
+            int res = IndexOfMaxOrder();
+            List<int> indexes = new List<int>();
+            indexes.Add(res);
+            for (int i = res + 1; i < all_points.Count; i++)
+            {
+                if (all_points[i].order == all_points[res].order)
+                    indexes.Add(i);
+            }
+            Random x = new Random();
+            int index = x.Next().Mod(indexes.Count);
+            return index;
+        }
+        public int IndexOf(int x, int y)
+        {
+            int i = 1;
+            bool end = false;
+            for (; i < points.Count && !end; i++)
+            {
+                if (points[i].x == x && points[i].y == y)
+                    end = true;
+            }
+            if (end)
+                return i - 1;
+            else
+                return -1;
+        }
+        public int Sum(int index_p1, int index_p2)
+        {
+            return (index_p1 + index_p2).Mod(p);
+        }
+        public Point Sum(Point p1, Point p2)
+        {
+            bool is_O = false;
+
+            int tg = 0;
+            if (p1.x == p2.x && p1.y == p2.y)
+            {
+                int value = (2 * p1.y).Mod(p);
                 if (value == 0)
-                    throw new DivideByZeroException();
-                tg = ((3 * p1.Key * p1.Key + a) * value.GetInverse(p)).Mod(p);
+                    is_O = true;
+                else
+                    tg = ((3 * p1.x * p1.x + a) * value.GetInverse(p)).Mod(p);
             }
             else
             {
-                int value = (p2.Key - p1.Key).Mod(p);
+                int value = (p2.x - p1.x).Mod(p);
                 if (value == 0)
-                    throw new DivideByZeroException();
-                tg = ((p2.Value - p1.Value) * value.GetInverse(p)).Mod(p);
+                    is_O = true;
+                else
+                    tg = ((p2.y - p1.y) * value.GetInverse(p)).Mod(p);
             }
 
-            int x = (tg * tg - p1.Key - p2.Key).Mod(p);
-            int y = (tg * (p1.Key - x) - p1.Value).Mod(p);
-
-            return new KeyValuePair<int, int>(x, y);
+            int x = 0, y = 0;
+            if (is_O)
+                return new Point(is_O);
+            else
+            {
+                x = (tg * tg - p1.x - p2.x).Mod(p);
+                y = (tg * (p1.x - x) - p1.y).Mod(p);
+                return new Point(x, y);
+            }
         }
-        public static int Mult(List<KeyValuePair<int, int>> group, int indexInGroup, int n)
+        public int Mult(int indexInGroup, int n)
         {
-            return ((indexInGroup + 1) * n - 1).Mod(group.Count + 1);
+            return (indexInGroup * n).Mod(p);
         }
-
     }
     public static class Int32Extensions
     {
@@ -188,6 +271,22 @@ namespace ЭЦП_на_эллиптических_кривых
             v = vd < 0 ? vd + b : vd;
 
             return (d == 1) ? u : 0;
+        }
+        public static int PowMod(this int a, int pow, int mod)
+        {
+            a = a.Mod(mod);
+            int res = 1;
+            int buf = a;
+            for (int i = 1; i <= pow; i *= 2)
+            {
+                if (i > 1)
+                    buf = (buf * buf).Mod(mod);
+                if ((pow & i) > 0)
+                {
+                    res *= buf;
+                }
+            }
+            return res.Mod(mod);
         }
         public static int Mod(this int a, int p)
         {
