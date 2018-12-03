@@ -14,8 +14,6 @@ namespace ЭЦП_на_эллиптических_кривых
 
         static void Main(string[] args)
         {
-            int a = 6;
-            int b = a.PowMod(53, 13);
             Group group = new Group(p, a, b);
             //здесь можно определить свой генератор группы
             group.Generate(group.IndexOfMaxOrder());
@@ -47,7 +45,7 @@ namespace ЭЦП_на_эллиптических_кривых
             x = 0;
             y = 0;
             order = -1;
-            is_O = true;
+            this.is_O = is_O;
         }
     }
     public class Group
@@ -116,10 +114,10 @@ namespace ЭЦП_на_эллиптических_кривых
                 do
                 {
                     n = Convert.ToInt32(Console.ReadLine());
-                    if (n >= points.Count || n <= 1)
+                    if (n >= points.Count - 1 || n <= 1)
                         Console.WriteLine($"Пожалуйста, введите другое число n: ");
                 }
-                while (n >= points.Count || n <= 1);
+                while (n >= points.Count - 1 || n <= 1);
 
                 int index_openKey = Mult(1, n);
                 int index_otherOpenKey, index_closeKey;
@@ -135,7 +133,7 @@ namespace ЭЦП_на_эллиптических_кривых
                 }
                 while (index_otherOpenKey == -1);
                 index_closeKey = Mult(index_otherOpenKey, n);
-                if (index != 0)//если не О
+                if (index_closeKey != 0)//если не О
                 {
                     Console.WriteLine($"Закрытый ключ: ({points[index_closeKey].x};{points[index_closeKey].y})");
                     result_is_O = false;
@@ -204,7 +202,7 @@ namespace ЭЦП_на_эллиптических_кривых
         }
         public int Sum(int index_p1, int index_p2)
         {
-            return (index_p1 + index_p2).Mod(p);
+            return (index_p1 + index_p2).Mod(points.Count);
         }
         public Point Sum(Point p1, Point p2)
         {
@@ -230,7 +228,7 @@ namespace ЭЦП_на_эллиптических_кривых
 
             int x = 0, y = 0;
             if (is_O)
-                return new Point(is_O);
+                return new Point(true);
             else
             {
                 x = (tg * tg - p1.x - p2.x).Mod(p);
@@ -240,7 +238,7 @@ namespace ЭЦП_на_эллиптических_кривых
         }
         public int Mult(int indexInGroup, int n)
         {
-            return (indexInGroup * n).Mod(p);
+            return (indexInGroup * n).Mod(points.Count);
         }
     }
     public static class Int32Extensions
