@@ -1,23 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+//using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace ЭЦП_на_эллиптических_кривых
 {
     class Program
     {
-        //Эллиптическая кривая
-        const int p = 41;
-        const int a = 1, b = 3; //опорная точка
-
-        static void Main(string[] args)
+        /// <summary>
+        /// Главная точка входа для приложения.
+        /// </summary>
+        [STAThread]
+        static void Main()
         {
-            Group group = new Group(p, a, b);
-            //здесь можно определить свой генератор группы
-            group.Generate(group.IndexOfMaxOrder());
-
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new Form1());
         }
     }
     public class Point
@@ -50,18 +50,32 @@ namespace ЭЦП_на_эллиптических_кривых
     }
     public class Group
     {
-        public int p, a, b;
-        public List<Point> all_points;
-        public List<Point> points;
-        public int[] sqrs; //sqrs[i] = i^2 mod p
-        public int[] sqrts; //sqrts[i] = sqrt(i) mod p
+        private int p, a, b;
+        //private int J;
+        private List<Point> group;
+        private List<Point> cyclic_group;
+        private int m; //порядок группы group
+        private int q; //порядок циклической подгруппы cyclic_group
+        private int d; //ключ подписи, 0 < d < q
+        private int indexcg_Q; //ключ проверки подписи, dP = Q
+        private int[] sqrs; //sqrs[i] = i^2 mod p
+        private int[] sqrts; //sqrts[i] = sqrt(i) mod p
+        private Random rand;
+        //int[] prTo1000 = new int[] {257,263,269,271,277,281,283,293,307,311,313,317,331,337,347,349,353,359,
+        //367,373,379,383,389,397,401,409,419,421,431,433,439,443,449,457,461,463,467,479,487,491,499,503,509,
+        //521,523,541,547,557,563,569,571,577,587,593,599,601,607,613,617,619,631,641,643,647,653,659,661,673,
+        //677,683,691,701,709,719,727,733,739,743,751,757,761,769,773,787,797,809,811,821,823,827,829,839,853,
+        //857,859,863,877,881,883,887,907,911,919,929,937,941,947,953,967,971,977,983,991,997};
+
         public Group(int new_p, int new_a, int new_b)
         {
-            all_points = new List<Point>();
-            points = new List<Point>();
+            rand = new Random();
+            group = new List<Point>();
+            cyclic_group = new List<Point>();
             p = new_p;
             a = new_a;
             b = new_b;
+            //J = (1728 * 4 * a * a * a * (4 * a * a * a + 27 * b * b).GetInverse(p)).Mod(p);
             sqrs = new int[p]; //sqrs[i] = i^2 mod p
             sqrts = new int[p]; //sqrts[i] = sqrt(i) mod p
             for (int i = 1; i < p; i++)
@@ -75,99 +89,149 @@ namespace ЭЦП_на_эллиптических_кривых
                 int y = (x * x * x + x + 3).Mod(p);
                 if (sqrs.Contains(y))
                 {
-                    all_points.Add(new Point(x, sqrts[y]));
+                    group.Add(new Point(x, sqrts[y]));
                     if (sqrts[y] != 0)
-                        all_points.Add(new Point(x, -sqrts[y] + p));
+                        group.Add(new Point(x, -sqrts[y] + p));
                 }
             }
-            for (int i = 0; i < all_points.Count; i++)
+            m = group.Count;
+            for (int i = 0; i < group.Count; i++)
             {
                 int por = 1;
-                Point init = all_points[i];
-                Point result = all_points[i];
+                Point init = group[i];
+                Point result = group[i];
                 while (!result.is_O)
                 {
                     por++;
                     result = Sum(init, result);
                 }
-                all_points[i].order = por;
+                group[i].order = por;
             }
         }
-        public void Generate(int index)
+        public void Generate(int indexg_P)
         {
-            Point gen = all_points[index];
-            points.Add(new Point(true));
-            Point result = gen;
+            Point P = group[indexg_P];
+            cyclic_group.Add(new Point(true));
+            Point result = P;
             while (result.is_O != true)
             {
-                points.Add(result);
-                Console.WriteLine($"({result.x};{result.y})");
-                result = Sum(gen, result);
+                cyclic_group.Add(result);
+                result = Sum(P, result);
             }
-
-            bool result_is_O = false;
+            q = cyclic_group.Count();
+            d = rand.Next(1, q - 1);
+            indexcg_Q = Mult(1, d);
+        }
+        public string GenerateSignature(string text)
+        {
+            int a = hash(text);
+            int e = a.Mod(p);
+            if (e == 0)
+                e = 1;
+            bool finish = false;
+            int r = 0, s = 0;
             do
             {
-                Console.WriteLine($"Всего точек в группе {points.Count()} (в том числе О)");
-                int n;
-                Console.WriteLine($"Введите число n: ");
-                do
-                {
-                    n = Convert.ToInt32(Console.ReadLine());
-                    if (n >= points.Count - 1 || n <= 1)
-                        Console.WriteLine($"Пожалуйста, введите другое число n: ");
-                }
-                while (n >= points.Count - 1 || n <= 1);
+                int k = 0;
+                k = rand.Next(1, cyclic_group.Count - 1);
 
-                int index_openKey = Mult(1, n);
-                int index_otherOpenKey, index_closeKey;
-                Console.WriteLine($"Открытый ключ: ({points[index_openKey].x};{points[index_openKey].y})");
-                do
+                int indexcg_C = Mult(1, k);
+                r = cyclic_group[indexcg_C].x.Mod(p);
+                if (r == 0)
                 {
-                    Console.WriteLine($"Введите второй открытый ключ: ");
-                    int x1 = Convert.ToInt32(Console.ReadLine());
-                    int y1 = Convert.ToInt32(Console.ReadLine());
-                    index_otherOpenKey = IndexOf(x1, y1);
-                    if (index_otherOpenKey == -1)
-                        Console.WriteLine($"Такого элемента в группе нет!");
+                    finish = false;
+                    continue;
                 }
-                while (index_otherOpenKey == -1);
-                index_closeKey = Mult(index_otherOpenKey, n);
-                if (index_closeKey != 0)//если не О
+                s = (r * d + k * e).Mod(p);
+                if (s == 0)
                 {
-                    Console.WriteLine($"Закрытый ключ: ({points[index_closeKey].x};{points[index_closeKey].y})");
-                    result_is_O = false;
+                    finish = false;
+                    continue;
                 }
-                else
-                {
-                    Console.WriteLine($"Закрытый ключ: O. Пожалуйста, повторите все с начала");
-                    result_is_O = true;
-                }
+                finish = true;
             }
-            while (result_is_O);
+            while (!finish);
+
+            string signature = Concat(r, s);
+            return signature;
         }
-        public int Count()
+
+        private int hash(string text)
         {
-            return points.Count;
+            int res = 0;
+            for (int i = 0; i < text.Length; i++)
+                res = (res + (int)text[i]).Mod(256);
+            return res;
         }
-        public Point At(int index)
+
+        private string Concat(int r, int s)
         {
-            if (index >= points.Count)
+            string res = "";
+
+            res = "0x" + ((UInt32)r).ToString("X8") + "\n";
+            res += "0x" + ((UInt32)s).ToString("X8");
+            return res;
+        }
+
+        private void Split(string sig, out int r, out int s)
+        {
+            char[] splitchar = { '\n' };
+            string[] strs = sig.Split(splitchar);
+            r = (Int32)Convert.ToUInt32(strs[0], 16);
+            s = (Int32)Convert.ToUInt32(strs[1], 16);
+        }
+
+        public bool VerifySignature(string text, string signature)
+        {
+            bool result = false;
+
+            int r = 0, s = 0;
+            Split(signature, out r, out s);
+            if (!(r > 0 && s > 0 && r < q && s < q))
+                return false;
+
+            int a = hash(text);
+            int e = a.Mod(p);
+            if (e == 0)
+                e = 1;
+
+            int v = e.GetInverse(p);
+            int z1 = (s * v).Mod(p);
+            int z2 = (-r * v).Mod(p);
+
+
+            int indexcg_C = Sum(Mult(1, z1), Mult(indexcg_Q, z2));
+            int RR = group[indexcg_C].x.Mod(p);
+
+            if (RR == r)
+                result = true;
+            else
+                result = false;
+            
+            return result;
+        }
+        private int Count()
+        {
+            return cyclic_group.Count;
+        }
+        private Point At(int index)
+        {
+            if (index >= cyclic_group.Count)
             {
                 throw new IndexOutOfRangeException();
             }
-            return points[index];
+            return cyclic_group[index];
         }
-        public void Add(Point point)
+        private void Add(Point point)
         {
-            points.Add(point);
+            cyclic_group.Add(point);
         }
         public int IndexOfMaxOrder()
         {
             int res = 0;
-            for (int i = 0; i < all_points.Count; i++)
+            for (int i = 0; i < group.Count; i++)
             {
-                if (all_points[i].order > all_points[res].order)
+                if (group[i].order > group[res].order)
                     res = i;
             }
             return res;
@@ -177,22 +241,22 @@ namespace ЭЦП_на_эллиптических_кривых
             int res = IndexOfMaxOrder();
             List<int> indexes = new List<int>();
             indexes.Add(res);
-            for (int i = res + 1; i < all_points.Count; i++)
+            for (int i = res + 1; i < group.Count; i++)
             {
-                if (all_points[i].order == all_points[res].order)
+                if (group[i].order == group[res].order)
                     indexes.Add(i);
             }
             Random x = new Random();
             int index = x.Next().Mod(indexes.Count);
             return index;
         }
-        public int IndexOf(int x, int y)
+        private int IndexOf(int x, int y)
         {
             int i = 1;
             bool end = false;
-            for (; i < points.Count && !end; i++)
+            for (; i < cyclic_group.Count && !end; i++)
             {
-                if (points[i].x == x && points[i].y == y)
+                if (cyclic_group[i].x == x && cyclic_group[i].y == y)
                     end = true;
             }
             if (end)
@@ -200,11 +264,11 @@ namespace ЭЦП_на_эллиптических_кривых
             else
                 return -1;
         }
-        public int Sum(int index_p1, int index_p2)
+        private int Sum(int index_p1, int index_p2)
         {
-            return (index_p1 + index_p2).Mod(points.Count);
+            return (index_p1 + index_p2).Mod(cyclic_group.Count);
         }
-        public Point Sum(Point p1, Point p2)
+        private Point Sum(Point p1, Point p2)
         {
             bool is_O = false;
 
@@ -236,17 +300,17 @@ namespace ЭЦП_на_эллиптических_кривых
                 return new Point(x, y);
             }
         }
-        public int Mult(int indexInGroup, int n)
+        private int Mult(int indexInCyclicGroup, int n)
         {
-            return (indexInGroup * n).Mod(points.Count);
+            return (indexInCyclicGroup * n).Mod(cyclic_group.Count);
         }
     }
     public static class Int32Extensions
     {
-        public static int GetInverse(this int a, int b)
+        public static int GetInverse(this int a, int p)
         {
             // Реализован расширенный алгоритм Евклида
-            int c = a, d = b, u, v;
+            int c = a, d = p, u, v;
             int uc = 1, vc = 0, ud = 0, vd = 1;
 
             while (c != 0)
@@ -265,8 +329,8 @@ namespace ЭЦП_на_эллиптических_кривых
                 vc = vd - q * vc;
                 vd = temp;
             }
-            u = ud < 0 ? ud + b : ud;
-            v = vd < 0 ? vd + b : vd;
+            u = ud < 0 ? ud + p : ud;
+            v = vd < 0 ? vd + p : vd;
 
             return (d == 1) ? u : 0;
         }
