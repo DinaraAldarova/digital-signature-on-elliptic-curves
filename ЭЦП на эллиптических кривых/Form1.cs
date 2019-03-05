@@ -7,7 +7,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Numerics;
 
 namespace ЭЦП_на_эллиптических_кривых
 {
@@ -16,11 +15,8 @@ namespace ЭЦП_на_эллиптических_кривых
         //Эллиптическая кривая
         //const int p = 449;
         //const int a = 1, b = 3; //опорная точка
-        //const int p = 7;//41;
-        //const int a = 1, b = 3; //опорная точка
-        BigInteger p = BigInteger.Parse("57896044618658097711785492504343953926634992332820282019728792003956564821041");
-        BigInteger a = BigInteger.Parse("7");
-        BigInteger b = BigInteger.Parse("43308876546767276905765904595650931995942111794451039583252968842033849580414"); //опорная точка
+        const int p = 7;//41;
+        const int a = 1, b = 3; //опорная точка
         Group group;
 
         public Form1()

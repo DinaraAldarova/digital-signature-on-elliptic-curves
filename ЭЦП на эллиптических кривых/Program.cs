@@ -4,7 +4,6 @@ using System.Linq;
 //using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Numerics;
 
 namespace ЭЦП_на_эллиптических_кривых
 {
@@ -23,18 +22,18 @@ namespace ЭЦП_на_эллиптических_кривых
     }
     public class Point
     {
-        public BigInteger x;
-        public BigInteger y;
-        public BigInteger order;
+        public int x;
+        public int y;
+        public int order;
         public bool is_O;
-        public Point(BigInteger x, BigInteger y, BigInteger order)
+        public Point(int x, int y, int order)
         {
             this.x = x;
             this.y = y;
             this.order = order;
             is_O = false;
         }
-        public Point(BigInteger x, BigInteger y)
+        public Point(int x, int y)
         {
             this.x = x;
             this.y = y;
@@ -51,16 +50,16 @@ namespace ЭЦП_на_эллиптических_кривых
     }
     public class Group
     {
-        private BigInteger p, a, b;
+        private int p, a, b;
         //private int J;
         private List<Point> group;
         private List<Point> cyclic_group;
-        private BigInteger m; //порядок группы group
-        private BigInteger q; //порядок циклической подгруппы cyclic_group
-        private BigInteger d; //ключ подписи, 0 < d < q
-        private BigInteger indexcg_Q; //ключ проверки подписи, dP = Q
-        //private BigInteger[] sqrs; //sqrs[i] = i^2 mod p
-        //private BigInteger[] sqrts; //sqrts[i] = sqrt(i) mod p
+        private int m; //порядок группы group
+        private int q; //порядок циклической подгруппы cyclic_group
+        private int d; //ключ подписи, 0 < d < q
+        private int indexcg_Q; //ключ проверки подписи, dP = Q
+        private int[] sqrs; //sqrs[i] = i^2 mod p
+        private int[] sqrts; //sqrts[i] = sqrt(i) mod p
         private Random rand;
         //int[] prTo1000 = new int[] {257,263,269,271,277,281,283,293,307,311,313,317,331,337,347,349,353,359,
         //367,373,379,383,389,397,401,409,419,421,431,433,439,443,449,457,461,463,467,479,487,491,499,503,509,
@@ -68,7 +67,7 @@ namespace ЭЦП_на_эллиптических_кривых
         //677,683,691,701,709,719,727,733,739,743,751,757,761,769,773,787,797,809,811,821,823,827,829,839,853,
         //857,859,863,877,881,883,887,907,911,919,929,937,941,947,953,967,971,977,983,991,997};
 
-        public Group(BigInteger new_p, BigInteger new_a, BigInteger new_b)
+        public Group(int new_p, int new_a, int new_b)
         {
             rand = new Random();
             group = new List<Point>();
@@ -77,14 +76,14 @@ namespace ЭЦП_на_эллиптических_кривых
             a = new_a;
             b = new_b;
             //J = (1728 * 4 * a * a * a * (4 * a * a * a + 27 * b * b).GetInverse(p)).Mod(p);
-            //sqrs = new BigInteger[p]; //sqrs[i] = i^2 mod p
-            //sqrts = new BigInteger[p]; //sqrts[i] = sqrt(i) mod p
-            //for (int i = 1; i < p; i++)
-            //{
-            //    sqrs[i] = (i * i).Mod(p);
-            //    if (sqrts[(i * i).Mod(p)] == 0)
-            //        sqrts[(i * i).Mod(p)] = i;
-            //}
+            sqrs = new int[p]; //sqrs[i] = i^2 mod p
+            sqrts = new int[p]; //sqrts[i] = sqrt(i) mod p
+            for (int i = 1; i < p; i++)
+            {
+                sqrs[i] = (i * i).Mod(p);
+                if (sqrts[(i * i).Mod(p)] == 0)
+                    sqrts[(i * i).Mod(p)] = i;
+            }
             for (int x = 0; x < p; x++)
             {
                 int y = (x * x * x + x + 3).Mod(p);
