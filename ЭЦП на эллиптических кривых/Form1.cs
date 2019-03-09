@@ -15,14 +15,14 @@ namespace ЭЦП_на_эллиптических_кривых
         //Эллиптическая кривая
         //const int p = 449;
         //const int a = 1, b = 3; //опорная точка
-        const int p = 7;//41;
+        const int p = 41;//7;//41;
         const int a = 1, b = 3; //опорная точка
-        Group group;
+        Curve group;
 
         public Form1()
         {
             InitializeComponent();
-            group = new Group(p, a, b);
+            group = new Curve(p, a, b);
             //здесь можно определить свой генератор группы
             group.Generate(group.IndexOfMaxOrder());
         }
@@ -34,6 +34,9 @@ namespace ЭЦП_на_эллиптических_кривых
 
             richTextBox2.Text = text;
             richTextBox4.Text = sig;
+
+            richTextBox3.Text = "";
+            richTextBox5.Text = "";
         }
 
         private void button2_Click(object sender, EventArgs e)

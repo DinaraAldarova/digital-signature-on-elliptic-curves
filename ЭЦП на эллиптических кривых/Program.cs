@@ -48,7 +48,7 @@ namespace ЭЦП_на_эллиптических_кривых
             this.is_O = is_O;
         }
     }
-    public class Group
+    public class Curve
     {
         private int p, a, b;
         //private int J;
@@ -67,7 +67,7 @@ namespace ЭЦП_на_эллиптических_кривых
         //677,683,691,701,709,719,727,733,739,743,751,757,761,769,773,787,797,809,811,821,823,827,829,839,853,
         //857,859,863,877,881,883,887,907,911,919,929,937,941,947,953,967,971,977,983,991,997};
 
-        public Group(int new_p, int new_a, int new_b)
+        public Curve(int new_p, int new_a, int new_b)
         {
             rand = new Random();
             group = new List<Point>();
@@ -155,32 +155,6 @@ namespace ЭЦП_на_эллиптических_кривых
             string signature = Concat(r, s);
             return signature;
         }
-
-        private int hash(string text)
-        {
-            int res = 0;
-            for (int i = 0; i < text.Length; i++)
-                res = (res + (int)text[i]).Mod(256);
-            return res;
-        }
-
-        private string Concat(int r, int s)
-        {
-            string res = "";
-
-            res = "0x" + ((UInt32)r).ToString("X8") + "\n";
-            res += "0x" + ((UInt32)s).ToString("X8");
-            return res;
-        }
-
-        private void Split(string sig, out int r, out int s)
-        {
-            char[] splitchar = { '\n' };
-            string[] strs = sig.Split(splitchar);
-            r = (Int32)Convert.ToUInt32(strs[0], 16);
-            s = (Int32)Convert.ToUInt32(strs[1], 16);
-        }
-
         public bool VerifySignature(string text, string signature)
         {
             bool result = false;
@@ -207,9 +181,35 @@ namespace ЭЦП_на_эллиптических_кривых
                 result = true;
             else
                 result = false;
-            
+
             return result;
         }
+
+        private int hash(string text)
+        {
+            Exception exception = new Exception("Хеш-код вставлен от балды. Переделай!!!");
+            int res = 0;
+            for (int i = 0; i < text.Length; i++)
+                res = (res + (int)text[i]).Mod(256);
+            return res;
+        }
+        private string Concat(int r, int s)
+        {
+            string res = "";
+
+            res = "0x" + ((UInt32)r).ToString("X8") + "\n";
+            res += "0x" + ((UInt32)s).ToString("X8");
+            return res;
+        }
+        private void Split(string sig, out int r, out int s)
+        {
+            char[] splitchar = { '\n' };
+            string[] strs = sig.Split(splitchar);
+            r = (Int32)Convert.ToUInt32(strs[0], 16);
+            s = (Int32)Convert.ToUInt32(strs[1], 16);
+        }
+
+        #region Операции работы с кривой
         private int Count()
         {
             return cyclic_group.Count;
@@ -304,6 +304,7 @@ namespace ЭЦП_на_эллиптических_кривых
         {
             return (indexInCyclicGroup * n).Mod(cyclic_group.Count);
         }
+        #endregion
     }
     public static class Int32Extensions
     {
