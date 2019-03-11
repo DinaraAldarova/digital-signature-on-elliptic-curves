@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Numerics;
 
 namespace ЭЦП_на_эллиптических_кривых
 {
@@ -22,9 +23,8 @@ namespace ЭЦП_на_эллиптических_кривых
         public Form1()
         {
             InitializeComponent();
-            group = new Curve(p, a, b);
+            group = new Curve();
             //здесь можно определить свой генератор группы
-            group.Generate(group.IndexOfMaxOrder());
         }
         
         private void button1_Click(object sender, EventArgs e)
@@ -45,7 +45,7 @@ namespace ЭЦП_на_эллиптических_кривых
             string sig = richTextBox4.Text;
 
             richTextBox3.Text = text;
-            richTextBox5.Text = group.VerifySignature(text,sig).ToString();
+            richTextBox5.Text = group.VerifySignature(text, sig).ToString();
         }
     }
 }
