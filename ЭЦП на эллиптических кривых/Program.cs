@@ -142,7 +142,7 @@ namespace ЭЦП_на_эллиптических_кривых
                     finish = false;
                     continue;
                 }
-                s = (r * d + k * e).Mod(p);
+                s = (r * d + k * e).Mod(q);
                 if (s == 0)
                 {
                     finish = false;
